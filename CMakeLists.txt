@@ -14,6 +14,14 @@ set(SDIO_DIR "${CMAKE_SOURCE_DIR}/sdio")
 set(DRIVER_DIR "${CMAKE_SOURCE_DIR}/driver")
 set(LINKER_DIR "${SDK_DIR}/ld")
 
+set(GEN_APP_DIR "${SDK_DIR}/tools")
+set(MODE, "0")
+set(FREQ_DIV, "0")
+set(SIZE_MAP, "6")
+
+#SET(CMAKE_MODULE_LINKER_FLAGS, "-u call_user_start")
+#add_definitions("-u call_user_start")
+
 
 set(GCC_PREFIX "xtensa-lx106-elf")
 set(EXTENSION "")
@@ -22,7 +30,7 @@ set(CMD_GCC     "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-gcc${EXTENSION}")
 set(CMD_OBJDUMP "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-objdump${EXTENSION}")
 set(CMD_OBJCOPY "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-objcopy${EXTENSION}")
 set(CMD_SIZE    "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-size${EXTENSION}")
-set(CMAKE_AR    "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-gcc${EXTENSION}")
+set(CMAKE_AR    "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-ar${EXTENSION}")
 set(CMD_NM      "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-nm${EXTENSION}")
 set(CMD_G++     "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-g++${EXTENSION}")
 set(CMD_LD      "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-ld${EXTENSION}")
@@ -166,7 +174,7 @@ add_definitions(
 add_compile_options(
         #-M
         -Os
-        #-g
+        -g
         -Wpointer-arith
         -Wundef
         -Werror
@@ -181,16 +189,14 @@ add_compile_options(
 )
 
 link_libraries(
-
-        -Os
+        #-Os
         -L${SDK_LIB_DIR}
-        #-T${LINKER_DIR}/eagle.rom.addr.v6.ld
-        #-T${LINKER_DIR}/eagle.app.v6.ld
-        -T${LINKER_DIR}/eagle.app.v6.new.2048.ld
         -Wl,--gc-sections
         -nostdlib
+        #-T${LINKER_DIR}/eagle.app.v6.new.2048.ld
+        -T${LINKER_DIR}/eagle.app.v6.ld
         -Wl,--no-check-sections
-        -u call_user_start
+        "-u call_user_start"
         -Wl,-static
         -Wl,--start-group
         -lcirom
@@ -203,7 +209,7 @@ link_libraries(
         -lhal
         -ljson
         -llwip
-        #-lmain
+        -lmain
         -lmesh
         -lnet80211
         -lnopoll
@@ -216,7 +222,6 @@ link_libraries(
         -lwpa
         -lwps
         -Wl,--end-group
-
 
 )
 
@@ -266,6 +271,30 @@ add_executable(${TARGET_NAME}
         ${DRIVER_DIR}/spi.c
         )
 
+# remove multiply defined printf functionality (duplicated at libmain.a
+add_custom_command(TARGET ${TARGET_NAME}
+        PRE_BUILD
+        COMMAND ${CMAKE_AR} -dv ${SDK_LIB_DIR}/libcirom.a lib_a-printf.o
+        )
+
+# post build objcopy
+add_custom_command(TARGET ${TARGET_NAME}
+        POST_BUILD
+        COMMAND ${CMD_OBJCOPY} --only-section .text -O binary ${TARGET_NAME} eagle.app.v6.text.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} eagle.app.v6.data.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} eagle.app.v6.rodata.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} eagle.app.v6.irom0text.bin
+        #COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
+        COMMAND MESSAGE(python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}")
+        )
+
+
+#add_custom_command(TARGET ${TARGET_NAME}
+#        POST_BUILD
+#        COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
+#        )
+
+
 #add_custom_target(
 #        firmware_binary ALL
 #        COMMAND ${ESP8266_ESPTOOL} -bz ${ESP8266_FLASH_SIZE} -eo $<TARGET_FILE:firmware> -bo firmware_${FW_ADDR_1}.bin -bs .text -bs .data -bs .rodata -bc -ec -eo $<TARGET_FILE:firmware> -es .irom0.text firmware_${FW_ADDR_2}.bin -ec
@@ -273,3 +302,17 @@ add_executable(${TARGET_NAME}
 
 
 #add_custom_target(flash COMMAND ${ESP8266_ESPTOOL} -cp ${ESP8266_ESPTOOL_COM_PORT} -cf firmware_${FW_ADDR_1}.bin -ca 0x40000 -cf firmware_${FW_ADDR_2}.bin)
+
+add_custom_target(split_file
+        python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
+#
+#        @mv eagle.app.flash.bin $(BIN_PATH)/eagle.flash.bin
+#        @mv eagle.app.v6.irom0text.bin $(BIN_PATH)/eagle.irom0text.bin
+#        @rm eagle.app.v6.*
+#        @echo "BIN_PATH: $(BIN_PATH)"
+#        @echo ""
+#        @echo "No boot needed."
+#        @echo "Generate eagle.flash.bin and eagle.irom0text.bin successully in BIN_PATH"
+#        @echo "eagle.flash.bin-------->0x00000"
+#        @echo "eagle.irom0text.bin---->0x20000"
+        )
