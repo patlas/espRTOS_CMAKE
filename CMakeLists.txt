@@ -6,6 +6,7 @@ project(${TARGET_NAME} C CXX ASM)
 
 set(CMAKE_VERBOSE_MAKEFILE 1)
 
+set(ESP8266_ESPTOOL "esptool")
 set(SDK_DIR "${CMAKE_SOURCE_DIR}/ESP8266_RTOS_SDK")
 set(SDK_LIB_DIR "${CMAKE_SOURCE_DIR}/ESP8266_RTOS_SDK/lib")
 set(FATFS_DIR "${CMAKE_SOURCE_DIR}/fatfs2")
@@ -14,13 +15,12 @@ set(SDIO_DIR "${CMAKE_SOURCE_DIR}/sdio")
 set(DRIVER_DIR "${CMAKE_SOURCE_DIR}/driver")
 set(LINKER_DIR "${SDK_DIR}/ld")
 
+set(PYTHON "/usr/bin/python")
 set(GEN_APP_DIR "${SDK_DIR}/tools")
-set(MODE, "0")
-set(FREQ_DIV, "0")
-set(SIZE_MAP, "6")
+set(MODE "0")
+set(FREQ_DIV "0")
+set(SIZE_MAP "6")
 
-#SET(CMAKE_MODULE_LINKER_FLAGS, "-u call_user_start")
-#add_definitions("-u call_user_start")
 
 
 set(GCC_PREFIX "xtensa-lx106-elf")
@@ -284,27 +284,34 @@ add_custom_command(TARGET ${TARGET_NAME}
         COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} eagle.app.v6.data.bin
         COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} eagle.app.v6.rodata.bin
         COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} eagle.app.v6.irom0text.bin
-        #COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
-        COMMAND MESSAGE(python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}")
+        COMMAND ${PYTHON} ${GEN_APP_DIR}/gen_appbin.py ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}
+
         )
 
 
-#add_custom_command(TARGET ${TARGET_NAME}
-#        POST_BUILD
-#        COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
-#        )
+add_custom_target(
+        flash ALL
+        #COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
+        # COMMAND ${ESP8266_ESPTOOL} write_flash -ff 40m -fm qio -fs 4MB 0x0 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
+        COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
+)
 
+add_custom_target(
+        flash_default ALL
+        COMMAND ${ESP8266_ESPTOOL} write_flash -ff 40m -fm qio -fs 4MB
+                0x3fe000 ${SDK_DIR}/bin/blank.bin
+                0x3fc000 ${SDK_DIR}/bin/esp_init_data_default.bin
+                0xfe000 ${SDK_DIR}/bin/blank.bin
+)
 
-#add_custom_target(
-#        firmware_binary ALL
-#        COMMAND ${ESP8266_ESPTOOL} -bz ${ESP8266_FLASH_SIZE} -eo $<TARGET_FILE:firmware> -bo firmware_${FW_ADDR_1}.bin -bs .text -bs .data -bs .rodata -bc -ec -eo $<TARGET_FILE:firmware> -es .irom0.text firmware_${FW_ADDR_2}.bin -ec
-#)
+add_custom_target(
+        erase_all
+        COMMAND ${ESP8266_ESPTOOL} erase_flash
+)
 
 
 #add_custom_target(flash COMMAND ${ESP8266_ESPTOOL} -cp ${ESP8266_ESPTOOL_COM_PORT} -cf firmware_${FW_ADDR_1}.bin -ca 0x40000 -cf firmware_${FW_ADDR_2}.bin)
 
-add_custom_target(split_file
-        python "${GEN_APP_DIR}/gen_appbin.py ${OUT_FILE} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
 #
 #        @mv eagle.app.flash.bin $(BIN_PATH)/eagle.flash.bin
 #        @mv eagle.app.v6.irom0text.bin $(BIN_PATH)/eagle.irom0text.bin
@@ -315,4 +322,3 @@ add_custom_target(split_file
 #        @echo "Generate eagle.flash.bin and eagle.irom0text.bin successully in BIN_PATH"
 #        @echo "eagle.flash.bin-------->0x00000"
 #        @echo "eagle.irom0text.bin---->0x20000"
-        )
