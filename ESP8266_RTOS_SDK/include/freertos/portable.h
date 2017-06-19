@@ -364,7 +364,7 @@ extern "C" {
  * Map to the memory management routines required for the port.
  */
 /* for freeRTOS, MEMLEAK_DEBUG must be enabled. */
-#if 1
+#if 0
 void *pvPortMalloc( size_t xSize ) PRIVILEGED_FUNCTION;
 void vPortFree( void *pv ) PRIVILEGED_FUNCTION;
 #else

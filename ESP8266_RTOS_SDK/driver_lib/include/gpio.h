@@ -190,7 +190,7 @@ typedef struct {
   *  
   * @return  the level of GPIO input 
   */
-#define GPIO_INPUT_GET(gpio_no)     ((gpio_input_get()>>gpio_no)&BIT0)
+#define GPIO_INPUT_GET(gpio_no)     ((gpio_input_get()>>gpio_no)&BIT(0))
 
 /**  
   * @brief   Enable GPIO16 output.

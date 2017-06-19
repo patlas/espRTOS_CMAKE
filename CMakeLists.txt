@@ -17,7 +17,7 @@ set(LINKER_DIR "${SDK_DIR}/ld")
 
 set(PYTHON "/usr/bin/python")
 set(GEN_APP_DIR "${SDK_DIR}/tools")
-set(MODE "0")
+set(MODE "3")
 set(FREQ_DIV "0")
 set(SIZE_MAP "6")
 
@@ -186,6 +186,7 @@ add_compile_options(
         -ffunction-sections
         -fdata-sections
         -fno-builtin-printf
+        -fno-jump-tables
 )
 
 link_libraries(
@@ -290,15 +291,15 @@ add_custom_command(TARGET ${TARGET_NAME}
 
 
 add_custom_target(
-        flash ALL
-        #COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
-        # COMMAND ${ESP8266_ESPTOOL} write_flash -ff 40m -fm qio -fs 4MB 0x0 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
-        COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
+        flash
+        # COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
+        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 115200 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
+        # COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
 )
 
 add_custom_target(
-        flash_default ALL
-        COMMAND ${ESP8266_ESPTOOL} write_flash -ff 40m -fm qio -fs 4MB
+        flash_default
+        COMMAND ${ESP8266_ESPTOOL} write_flash -ff 40m -fm dout -fs 4MB
                 0x3fe000 ${SDK_DIR}/bin/blank.bin
                 0x3fc000 ${SDK_DIR}/bin/esp_init_data_default.bin
                 0xfe000 ${SDK_DIR}/bin/blank.bin
