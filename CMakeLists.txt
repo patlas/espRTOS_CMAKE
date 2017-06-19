@@ -168,6 +168,7 @@ include_directories(
 
 add_definitions(
         -DICACHE_FLASH
+        -DMEMLEAK_DEBUG
 )
 
 
@@ -291,7 +292,7 @@ add_custom_command(TARGET ${TARGET_NAME}
 
 
 add_custom_target(
-        flash
+        flash_app
         # COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
         COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 115200 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
         # COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
