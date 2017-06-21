@@ -1,3 +1,8 @@
+cmake-build-*
+examples
+documents
+.idea
+ESP8266_RTOS_SDK_OLD/
 # Prerequisites
 *.d
 

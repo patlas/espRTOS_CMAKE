@@ -22,6 +22,7 @@
 #include "spi_interface.h"
 #include "esp8266/eagle_soc.h"
 #include "esp8266/ets_sys.h"
+#include "esp8266/pin_mux_register.h"
 #include "esp_libc.h"
 //*****************************************************************************
 //

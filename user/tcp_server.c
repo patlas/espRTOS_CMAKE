@@ -167,7 +167,7 @@ IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short 
 			fname[name_len+1] = '\0';
 			printf("\nNAME:%s : %d\n", &fname[0], name_len);
 
-			send_file(pespconn, &fname[0]);
+			//send_file(pespconn, &fname[0]);
 			/*if(strncmp("/favico",&fname[0], 7)){
 				send_header(pespconn, _200, HTML, 13);
 				//printf("Ret sent: %d\n",espconn_send(pespconn, test, 13));
@@ -189,9 +189,9 @@ IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short 
 IRAM_ATTR static void data_sent_callback(void *arg)
 {
 	printf("\nSend Callback: Data sent\n");
-	if(pdTRUE == xSemaphoreGive(sentFlagSemaphore)){
-		printf("\nSend Callback: semaphore released\n");
-	}
+//	if(pdTRUE == xSemaphoreGive(sentFlagSemaphore)){
+//		printf("\nSend Callback: semaphore released\n");
+//	}
 	printf("\nSend Callback: cannot release semaphore\n");
 }
 
@@ -225,7 +225,7 @@ sint8 start_server(void)
 	if(espconn_regist_connectcb (&espconn_struct, connect_callback)) return (sint8)(-1);
 	//espconn_regist_reconcb(&espconn_struct, reconnect_callback);
 	
-	espconn_set_opt(&espconn_struct, ESPCONN_REUSEADDR | ESPCONN_NODELAY);
+	espconn_set_opt(&espconn_struct, ESPCONN_REUSEADDR | ESPCONN_NODELAY | ESPCONN_KEEPALIVE);
 	//espconn_init();
 	if(espconn_accept(&espconn_struct)) return -2;
 	if(espconn_regist_time(&espconn_struct, server_timeover, 0)) return -3;

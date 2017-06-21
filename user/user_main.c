@@ -20,7 +20,7 @@
 #define TEST_CONTENTS "Hello! It's FatFs on esp8266 with ESP Open RTOS!"
 #define READBUF_SIZE 100
 #define DELAY_MS 3000
-#define MEMLEAK_DEBUG
+
 
 
 // DISABLE PRINTF
@@ -176,13 +176,14 @@ void check_fatfs()
 
 
 LOCAL void wifi_event(System_Event_t *event) {
-  switch (event->event_id) {
-    case EVENT_SOFTAPMODE_STACONNECTED:
-        printf("TCP server: %d\n", start_server());
-    break;
-    //default:
-      //os_printf("WiFi Event: %d\n", event->event_id);
-  }
+    switch (event->event_id) {
+        case EVENT_SOFTAPMODE_STACONNECTED:
+            printf("TCP server: %d\n", start_server());
+        break;
+        default:
+            os_printf("WiFi Event: %d\n", event->event_id);
+        break;
+    }
 }
 
 multi_args_t multiarg;
@@ -192,8 +193,8 @@ void user_init(void)
         os_install_putc1(user_printf);
     #endif
 
-    sendQueue = xQueueCreate(100, sizeof(queue_struct_t));
-    vSemaphoreCreateBinary(sentFlagSemaphore);
+    //sendQueue = xQueueCreate(100, sizeof(queue_struct_t));
+    //vSemaphoreCreateBinary(sentFlagSemaphore);
 
     //uart_set_baud(0, 115200);
     printf("SDK version:%s\n\n", system_get_sdk_version());
@@ -209,27 +210,27 @@ void user_init(void)
 // --------------------------------------------------------------------------//
 
 // -------------------- ENABLE SD CARD & FatFS ------------------------------//
-    char const * const vol = "0:";
+//    char const * const vol = "0:";
+//
+//    FATFS fs;
+//    if(FR_OK != f_mount(&fs, vol, 1)){
+//        printf("[ERROR] - cannot mount volume\n");
+//        return;
+//    }
+//
+//    if (FR_OK != f_chdrive(vol)){
+//        printf("[ERROR] - cannot select volume\n");
+//        return;
+//    }
 
-    FATFS fs;
-    if(FR_OK != f_mount(&fs, vol, 1)){
-        printf("[ERROR] - cannot mount volume\n");
-        return;
-    }
-
-    if (FR_OK != f_chdrive(vol)){
-        printf("[ERROR] - cannot select volume\n");
-        return;
-    }
-
-// ----------------------------------------------------------------------------//    
-    if(pdTRUE != xSemaphoreGive(sentFlagSemaphore))
-        printf("MAIN: cannot release semaphore\n");
-
-    multiarg.arg1 = &sendQueue;
-    multiarg.arg2 = &sentFlagSemaphore;
-    if(pdPASS == xTaskCreate(sender_thread, "sender", 512, &multiarg, 2, NULL))
-        printf("MAIN: task created\n");
+//// ----------------------------------------------------------------------------//
+//    if(pdTRUE != xSemaphoreGive(sentFlagSemaphore))
+//        printf("MAIN: cannot release semaphore\n");
+//
+//    multiarg.arg1 = &sendQueue;
+//    multiarg.arg2 = &sentFlagSemaphore;
+//    if(pdPASS == xTaskCreate(sender_thread, "sender", 512, &multiarg, 2, NULL))
+//        printf("MAIN: task created\n");
 
 
 

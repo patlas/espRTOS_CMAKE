@@ -449,7 +449,7 @@
 /**
  * LWIP_IPV6==1: Enable IPv6
  */
-#define LWIP_IPV6                       0
+#define LWIP_IPV6                       1
 
 /*
    ---------------------------------------

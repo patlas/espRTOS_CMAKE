@@ -167,11 +167,11 @@ ifneq ($(app),0)
                 LD_FILE = $(LDDIR)/eagle.app.v6.$(boot).512.app$(app).ld
               endif
             endif
-	      endif
-	    endif
-	  endif
-	endif
-	BIN_NAME = user$(app).$(flash).$(boot).$(size_map)
+          endif
+        endif
+      endif
+    endif
+    BIN_NAME = user$(app).$(flash).$(boot).$(size_map)
 endif
 else
     app = 0
@@ -424,3 +424,4 @@ INCLUDES += -I $(SDK_PATH)/include/nopoll
 INCLUDES += -I $(SDK_PATH)/include/spiffs
 INCLUDES += -I $(SDK_PATH)/include/ssl
 INCLUDES += -I $(SDK_PATH)/include/json
+INCLUDES += -I $(SDK_PATH)/include/openssl

@@ -93,12 +93,12 @@ set(LWIP_FILES
         #${SDK_DIR}/third_party/lwip/core/ipv6/nd6.c
 
 
-        ${SDK_DIR}/third_party/lwip/core/snmp/asn1_dec.c
-        ${SDK_DIR}/third_party/lwip/core/snmp/asn1_enc.c
-        ${SDK_DIR}/third_party/lwip/core/snmp/mib2.c
-        ${SDK_DIR}/third_party/lwip/core/snmp/mib_structs.c
-        ${SDK_DIR}/third_party/lwip/core/snmp/msg_in.c
-        ${SDK_DIR}/third_party/lwip/core/snmp/msg_out.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/asn1_dec.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/asn1_enc.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/mib2.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/mib_structs.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/msg_in.c
+#        ${SDK_DIR}/third_party/lwip/core/snmp/msg_out.c
 
         ${SDK_DIR}/third_party/lwip/netif/etharp.c
         ${SDK_DIR}/third_party/lwip/netif/ethernetif.c
@@ -188,6 +188,7 @@ add_compile_options(
         -fdata-sections
         -fno-builtin-printf
         -fno-jump-tables
+        #-fno-aggressive-loop-optimizations
 )
 
 link_libraries(
@@ -212,7 +213,7 @@ link_libraries(
         -ljson
         -llwip
         -lmain
-        -lmesh
+        #-lmesh
         -lnet80211
         -lnopoll
         -lphy
@@ -220,7 +221,7 @@ link_libraries(
         -lpwm
         -lsmartconfig
         -lspiffs
-        -lssl
+        #-lssl
         -lwpa
         -lwps
         -Wl,--end-group
@@ -228,22 +229,14 @@ link_libraries(
 )
 
 set_source_files_properties(
-        ${LWIP_FIELS} PROPERTIES COMPILE_FLAGS
-
-        -fno-aggressive-loop-optimizations
-        -D_POSIX_SOURCE
-        -DLWIP_OPEN_SRC
-        -DPBUF_RSV_FOR_WLAN
-        -DEBUF_LWIP
+        ${LWIP_FILES} PROPERTIES
+        COMPILE_FLAGS "-fno-aggressive-loop-optimizations"
+        COMPILE_DEFINITIONS "_POSIX_SOURCE"
+        COMPILE_DEFINITIONS "LWIP_OPEN_SRC"
+        COMPILE_DEFINITIONS "PBUF_RSV_FOR_WLAN"
+        COMPILE_DEFINITIONS "EBUF_LWIP"
 )
 
-set_source_files_properties(
-        ${FREE_RTOS_FILES} PROPERTIES COMPILE_FLAGS
-
-        " "
-        -DMEMLEAK_DEBUG
-        -DICACHE_FLASH
-)
 
 add_executable(${TARGET_NAME}
 
@@ -294,7 +287,8 @@ add_custom_command(TARGET ${TARGET_NAME}
 add_custom_target(
         flash_app
         # COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
-        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 115200 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
+        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin
+        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4MB 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
         # COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
 )
 
