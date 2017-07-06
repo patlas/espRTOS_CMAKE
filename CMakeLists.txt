@@ -6,7 +6,7 @@ project(${TARGET_NAME} C CXX ASM)
 
 set(CMAKE_VERBOSE_MAKEFILE 1)
 
-set(ESP8266_ESPTOOL "esptool")
+
 set(SDK_DIR "${CMAKE_SOURCE_DIR}/ESP8266_RTOS_SDK")
 set(SDK_LIB_DIR "${CMAKE_SOURCE_DIR}/ESP8266_RTOS_SDK/lib")
 set(FATFS_DIR "${CMAKE_SOURCE_DIR}/fatfs2")
@@ -14,6 +14,7 @@ set(USER_DIR "${CMAKE_SOURCE_DIR}/user")
 set(SDIO_DIR "${CMAKE_SOURCE_DIR}/sdio")
 set(DRIVER_DIR "${CMAKE_SOURCE_DIR}/driver")
 set(LINKER_DIR "${SDK_DIR}/ld")
+
 
 set(PYTHON "/usr/bin/python")
 set(GEN_APP_DIR "${SDK_DIR}/tools")
@@ -25,7 +26,10 @@ set(SIZE_MAP "6")
 
 set(GCC_PREFIX "xtensa-lx106-elf")
 set(EXTENSION "")
-set(TOOLCHAIN_PATH "/home/xtensa-compiler")
+set(TOOLCHAIN_PATH "/home/xtensa-lx106-elf")
+
+set(ESP8266_ESPTOOL ${PYTHON} ${TOOLCHAIN_PATH}/bin/esptool.py)
+
 set(CMD_GCC     "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-gcc${EXTENSION}")
 set(CMD_OBJDUMP "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-objdump${EXTENSION}")
 set(CMD_OBJCOPY "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-objcopy${EXTENSION}")
@@ -34,6 +38,8 @@ set(CMAKE_AR    "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-ar${EXTENSION}")
 set(CMD_NM      "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-nm${EXTENSION}")
 set(CMD_G++     "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-g++${EXTENSION}")
 set(CMD_LD      "${TOOLCHAIN_PATH}/bin/${GCC_PREFIX}-ld${EXTENSION}")
+
+MESSAGE(${CMD_GCC})
 
 set(CMAKE_C_COMPILER   ${CMD_GCC})
 set(CMAKE_ASM_COMPILER ${CMD_GCC})
@@ -134,7 +140,7 @@ set(FREE_RTOS_FILES
 
 
 include_directories(
-        ${FATFS_DIR}
+        #${FATFS_DIR}
         ${DRIVER_DIR}
         ${USER_DIR}
         ${SDIO_DIR}
@@ -213,7 +219,7 @@ link_libraries(
         -ljson
         -llwip
         -lmain
-        #-lmesh
+        -lmesh
         -lnet80211
         -lnopoll
         -lphy
@@ -221,7 +227,7 @@ link_libraries(
         -lpwm
         -lsmartconfig
         -lspiffs
-        #-lssl
+        -lssl
         -lwpa
         -lwps
         -Wl,--end-group
@@ -256,11 +262,11 @@ add_executable(${TARGET_NAME}
         ${USER_DIR}/tcp_server.c
         ${USER_DIR}/user_main.c
 
-        ${FATFS_DIR}/diskio.c
-        ${FATFS_DIR}/ff.c
-        ${FATFS_DIR}/syscall.c
-        ${FATFS_DIR}/unicode.c
-        ${FATFS_DIR}/volumes.c
+#        ${FATFS_DIR}/diskio.c
+#        ${FATFS_DIR}/ff.c
+#        ${FATFS_DIR}/syscall.c
+#        ${FATFS_DIR}/unicode.c
+#        ${FATFS_DIR}/volumes.c
 
         ${DRIVER_DIR}/gpio.c
         ${DRIVER_DIR}/spi.c
@@ -287,8 +293,8 @@ add_custom_command(TARGET ${TARGET_NAME}
 add_custom_target(
         flash_app
         # COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}"
-        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin
-        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4MB 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
+        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4m 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
+        # COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4m 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
         # COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
 )
 
