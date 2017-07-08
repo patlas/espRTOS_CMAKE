@@ -23,7 +23,7 @@ ESP8266_RTOS_SDK_OLD/
 
 # Libraries
 *.lib
-*.a
+
 *.la
 *.lo
 
