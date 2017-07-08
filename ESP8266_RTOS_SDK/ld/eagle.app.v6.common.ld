@@ -165,7 +165,7 @@ SECTIONS
     *(.xt_except_desc_end)
     *(.dynamic)
     *(.gnu.version_d)
-    . = ALIGN(4);       /* this table MUST be 4-byte aligned */
+    . = ALIGN(4);		/* this table MUST be 4-byte aligned */
     _bss_table_start = ABSOLUTE(.);
     LONG(_bss_start)
     LONG(_bss_end)
@@ -175,9 +175,9 @@ SECTIONS
 
   .UserExceptionVector.literal : AT(LOADADDR(.rodata) + (ADDR(.UserExceptionVector.literal) - ADDR(.rodata))) ALIGN(4)
   {
-    _UserExceptionVector_literal_start = ABSOLUTE(.);
-    *(.UserExceptionVector.literal)
-    _UserExceptionVector_literal_end = ABSOLUTE(.);
+  	_UserExceptionVector_literal_start = ABSOLUTE(.);
+  	*(.UserExceptionVector.literal)
+  	_UserExceptionVector_literal_end = ABSOLUTE(.);
   } >dram0_0_seg :dram0_0_phdr
 
   .bss ALIGN(8) (NOLOAD) : ALIGN(4)
@@ -203,6 +203,8 @@ SECTIONS
 /*    _stack_sentry = ALIGN(0x8); */
   } >dram0_0_seg :dram0_0_bss_phdr
 /* __stack = 0x3ffc8000; */
+
+
 
   .lit4 : ALIGN(4)
   {

@@ -113,29 +113,29 @@ FIL fd;
 IRAM_ATTR int8_t send_file(struct espconn *conn, char *file_name){
 
 	
-	
-	printf("\nTry to send file: %s", file_name);
-    if (FR_OK != f_open(&fd, file_name, FA_READ)){
-		printf("[ERROR] - cannot open file\n");
-		return -1;
-	}
-
-	//send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
-	printf("\nFile opened, size: %d",f_size(&fd));
-    size_t readed=0;
-    // Read file
-	//start file sending task instead -> this above cause watchdog restart
-	do {
-		//if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
-		//	return -2; // break and goto f_close()
-		if(readed <= 0) break;
-		//send_data(conn, &readbuf[0], readed);
-		printf("\nSend file: %s", readbuf);
-		printf("\nSend file: %d", readed);
-	} while(1);
-
-    // Close file
-	printf("\n File closed: %d\n",f_close(&fd));
+//
+//	printf("\nTry to send file: %s", file_name);
+//    if (FR_OK != f_open(&fd, file_name, FA_READ)){
+//		printf("[ERROR] - cannot open file\n");
+//		return -1;
+//	}
+//
+//	//send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
+//	printf("\nFile opened, size: %d",f_size(&fd));
+//    size_t readed=0;
+//    // Read file
+//	//start file sending task instead -> this above cause watchdog restart
+//	do {
+//		//if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
+//		//	return -2; // break and goto f_close()
+//		if(readed <= 0) break;
+//		//send_data(conn, &readbuf[0], readed);
+//		printf("\nSend file: %s", readbuf);
+//		printf("\nSend file: %d", readed);
+//	} while(1);
+//
+//    // Close file
+//	printf("\n File closed: %d\n",f_close(&fd));
     return 0;
 }
 

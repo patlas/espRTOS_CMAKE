@@ -34,9 +34,8 @@
 #define ETS_WDT_INUM        8
 #define ETS_FRC_TIMER1_INUM 9
 
-#include "c_types.h"
 extern char NMIIrqIsOn;
-extern uint32 WDEV_INTEREST_EVENT;
+extern unsigned int WDEV_INTEREST_EVENT;
 
 #define INT_ENA_WDEV        0x3ff20c18
 #define WDEV_TSF0_REACH_INT (BIT(27))
