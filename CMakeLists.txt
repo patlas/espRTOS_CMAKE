@@ -265,7 +265,7 @@ add_executable(${TARGET_NAME}
 
         ${LWIP_FILES}
         ${FREE_RTOS_FILES}
-        ${GDBSTUB_FILES}
+        #${GDBSTUB_FILES}
 
         ${SDIO_DIR}/sdio.c
 
@@ -309,6 +309,7 @@ add_custom_command(TARGET ${TARGET_NAME}
         COMMAND mv eagle.app.v6.data.bin ${OUT_DIR}/
         COMMAND mv eagle.app.v6.rodata.bin ${OUT_DIR}/
         COMMAND mv eagle.app.v6.irom0text.bin ${OUT_DIR}/
+        COMMAND mv eagle.app.flash.bin ${OUT_DIR}/
 
         )
 

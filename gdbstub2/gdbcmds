@@ -1,0 +1,8 @@
+file /home/patlas/Desktop/espRTOS_CMAKE_my/cmake-build-default/esp_aqua
+#set remotedebug 1
+#set remotelogfile gdb_rsp_logfile.txt
+#set serial baud 74480
+set remote hardware-breakpoint-limit 1
+set remote hardware-watchpoint-limit 1
+set debug xtensa 4
+target remote /dev/ttyUSB0

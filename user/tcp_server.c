@@ -6,8 +6,7 @@
 #include "../fatfs2/ff.h"
 
 //ICACHE_FLASH_ATTR 
-xSemaphoreHandle  sentFlagSemaphore;
-xQueueHandle sendQueue;
+
 
 static struct espconn espconn_struct;
 static esp_tcp tcp;
@@ -50,7 +49,7 @@ static char const * const request_content = {
 };
 
 
-IRAM_ATTR con_type_t get_mime(char *file_name)
+/*IRAM_ATTR*/ con_type_t get_mime(char *file_name)
 {
 	char *ftype = strrchr(file_name, '.');
 	ftype++;
@@ -65,7 +64,7 @@ IRAM_ATTR con_type_t get_mime(char *file_name)
 	return PLAIN;
 }
 
-IRAM_ATTR void sender_thread(void *args)
+/*IRAM_ATTR*/ void sender_thread(void *args)
 {
 	multi_args_t *multiarg = (multi_args_t*)args;
 	xQueueHandle *squeue = (xQueueHandle*) multiarg->arg1;
@@ -90,62 +89,65 @@ IRAM_ATTR void sender_thread(void *args)
 }
 
 
-IRAM_ATTR void send_header(struct espconn *conn, status_t stat, con_type_t type, unsigned long length)
+/*IRAM_ATTR*/ void send_header(struct espconn *conn, status_t stat, con_type_t type, unsigned long length)
 {
 	queue_struct_t qstruct;
 	qstruct.espconn = conn;
 	sprintf(qstruct.data, request_content, status_list[stat], length, mime_str[type]);
 	qstruct.size = strlen(qstruct.data);
-	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
+//	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
 }
 
-IRAM_ATTR void send_data(struct espconn *conn, uint8_t *data, uint8_t size)
+/*IRAM_ATTR*/ void send_data(struct espconn *conn, uint8_t *data, uint8_t size)
 {
 	queue_struct_t qstruct;
 	qstruct.espconn = conn;
 	memcpy((void*)qstruct.data, data, size);
 	qstruct.size = size;
-	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
+
+	printf("SENDING %d",espconn_send(conn, data, size));
+//	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
 }
 
 char readbuf[100];
 FIL fd;
-IRAM_ATTR int8_t send_file(struct espconn *conn, char *file_name){
+/*IRAM_ATTR*/ int8_t send_file(struct espconn *conn, char *file_name){
 
 	
-//
-//	printf("\nTry to send file: %s", file_name);
-//    if (FR_OK != f_open(&fd, file_name, FA_READ)){
-//		printf("[ERROR] - cannot open file\n");
-//		return -1;
-//	}
-//
-//	//send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
-//	printf("\nFile opened, size: %d",f_size(&fd));
-//    size_t readed=0;
-//    // Read file
-//	//start file sending task instead -> this above cause watchdog restart
-//	do {
-//		//if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
-//		//	return -2; // break and goto f_close()
-//		if(readed <= 0) break;
-//		//send_data(conn, &readbuf[0], readed);
-//		printf("\nSend file: %s", readbuf);
-//		printf("\nSend file: %d", readed);
-//	} while(1);
-//
-//    // Close file
-//	printf("\n File closed: %d\n",f_close(&fd));
+
+	printf("\nTry to send file: %s", file_name);
+    if (FR_OK != f_open(&fd, file_name, FA_READ)){
+		printf("[ERROR] - cannot open file\n");
+		return -1;
+	}
+
+	//send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
+	printf("\nFile opened, size: %d",f_size(&fd));
+    size_t readed=0;
+    // Read file
+	//start file sending task instead -> this above cause watchdog restart
+	do {
+		//if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
+		//	return -2; // break and goto f_close()
+		if(readed <= 0) break;
+		//send_data(conn, &readbuf[0], readed);
+		printf("\nSend file: %s", readbuf);
+		printf("\nSend file: %d", readed);
+	} while(1);
+
+    // Close file
+	printf("\n File closed: %d\n",f_close(&fd));
     return 0;
 }
 
 char fname[50];
-IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short len)
+char *test = "\n<h1>TEST</h1>";
+/*IRAM_ATTR*/ static void data_recv_callback(void *arg, char *pdata, unsigned short len)
 {
 	//arg contains pointer to espconn struct
 	struct espconn *pespconn = (struct espconn *) arg;
 
-	printf("Received data: \"%s\"\n Length: %d\n", pdata, len);
+	printf("Receive callback\nReceived data: \"%s\"\n Length: %d\n", pdata, len);
 	
 	char* chr;
 	
@@ -160,7 +162,7 @@ IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short 
 	}
 	
 	unsigned int name_len = (strchr(chr+1, ' ') - pdata - request_str_len - 1);
-	//char *test = "\n<h1>TEST</h1>";
+
 	switch(i){
 		case GET:
 			memcpy(&fname[0], chr+1, name_len);
@@ -168,12 +170,12 @@ IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short 
 			printf("\nNAME:%s : %d\n", &fname[0], name_len);
 
 			//send_file(pespconn, &fname[0]);
-			/*if(strncmp("/favico",&fname[0], 7)){
-				send_header(pespconn, _200, HTML, 13);
-				//printf("Ret sent: %d\n",espconn_send(pespconn, test, 13));
+//			if(strncmp("/favico",&fname[0], 7)){
+//				send_header(pespconn, _200, HTML, 13);
+//				//printf("Ret sent: %d\n",espconn_send(pespconn, test, 13));
 				send_data(pespconn, test, 13);
-				printf("\nPoszlo\n");
-			}*/
+//				printf("\nPoszlo\n");
+//			}
 				
 			
 		break;
@@ -186,30 +188,38 @@ IRAM_ATTR static void data_recv_callback(void *arg, char *pdata, unsigned short 
 	
 }
 
-IRAM_ATTR static void data_sent_callback(void *arg)
+/*IRAM_ATTR*/ static void data_sent_callback(void *arg)
 {
-	printf("\nSend Callback: Data sent\n");
+	printf("\nSent Callbackt\n");
 //	if(pdTRUE == xSemaphoreGive(sentFlagSemaphore)){
 //		printf("\nSend Callback: semaphore released\n");
 //	}
-	printf("\nSend Callback: cannot release semaphore\n");
+//	printf("\nSend Callback: cannot release semaphore\n");
+}
+
+static void reconnect_callback(void *arg, sint8 er)
+{
+	//connect_callback(arg);
+	printf("Reconnect callback\n");
+}
+
+static void disconnect_callback(void *arg)
+{
+	printf("Disconnct callback");
 }
 
 static void connect_callback(void *arg)
 {
 	struct espconn *pespconn = (struct espconn *)arg;
-	printf("TCP connection established\n");
+	printf("Connect callback: TCP connection established\n");
 	espconn_regist_recvcb (pespconn, data_recv_callback);
 
-    // espconn_regist_reconcb(pespconn, tcpserver_recon_cb);
-    //espconn_regist_disconcb(pespconn, shell_tcp_disconcb);
+    espconn_regist_reconcb(pespconn, reconnect_callback);
+    espconn_regist_disconcb(pespconn, disconnect_callback);
     espconn_regist_sentcb(pespconn, data_sent_callback);
 }
 
-/*static void reconnect_callback(void *arg, sint8 er)
-{
-	connect_callback(arg);
-}*/
+
 
 
 sint8 start_server(void)
@@ -225,7 +235,7 @@ sint8 start_server(void)
 	if(espconn_regist_connectcb (&espconn_struct, connect_callback)) return (sint8)(-1);
 	//espconn_regist_reconcb(&espconn_struct, reconnect_callback);
 	
-	espconn_set_opt(&espconn_struct, ESPCONN_REUSEADDR | ESPCONN_NODELAY | ESPCONN_KEEPALIVE);
+	espconn_set_opt(&espconn_struct, ESPCONN_REUSEADDR | ESPCONN_NODELAY/* | ESPCONN_KEEPALIVE*/);
 	//espconn_init();
 	if(espconn_accept(&espconn_struct)) return -2;
 	if(espconn_regist_time(&espconn_struct, server_timeover, 0)) return -3;

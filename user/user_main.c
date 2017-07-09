@@ -12,8 +12,12 @@
 #include "access_point.h"
 #include "tcp_server.h"
 
+
+
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
+
+//#include <../gdbstub2/gdbstub.h>
 
 #define CS_GPIO_PIN 2
 #define TEST_FILENAME "/test_loooong_filename.txt"
@@ -68,8 +72,8 @@ user_rf_cal_sector_set(void)
 
 
 extern char readbuf[100];
-extern xQueueHandle sendQueue;
-extern xSemaphoreHandle  sentFlagSemaphore;
+xSemaphoreHandle  sentFlagSemaphore;
+xQueueHandle sendQueue;
 
 
 static const char contents[] = TEST_CONTENTS;
@@ -193,10 +197,12 @@ void user_init(void)
         os_install_putc1(user_printf);
     #endif
 
-    //sendQueue = xQueueCreate(100, sizeof(queue_struct_t));
-    //vSemaphoreCreateBinary(sentFlagSemaphore);
+//    sendQueue = xQueueCreate(100, sizeof(queue_struct_t));
+//    vSemaphoreCreateBinary(sentFlagSemaphore);
 
-    //uart_set_baud(0, 115200);
+//    UART_SetBaudrate(0, 115200);
+//    gdbstub_init();
+
     printf("SDK version:%s\n\n", system_get_sdk_version());
     printf("\n\n");
     
@@ -210,20 +216,20 @@ void user_init(void)
 // --------------------------------------------------------------------------//
 
 // -------------------- ENABLE SD CARD & FatFS ------------------------------//
-//    char const * const vol = "0:";
-//
-//    FATFS fs;
-//    if(FR_OK != f_mount(&fs, vol, 1)){
-//        printf("[ERROR] - cannot mount volume\n");
-//        return;
-//    }
-//
-//    if (FR_OK != f_chdrive(vol)){
-//        printf("[ERROR] - cannot select volume\n");
-//        return;
-//    }
+    char const * const vol = "0:";
 
-//// ----------------------------------------------------------------------------//
+    FATFS fs;
+    if(FR_OK != f_mount(&fs, vol, 1)){
+        printf("[ERROR] - cannot mount volume\n");
+        return;
+    }
+
+    if (FR_OK != f_chdrive(vol)){
+        printf("[ERROR] - cannot select volume\n");
+        return;
+    }
+
+// ----------------------------------------------------------------------------//
 //    if(pdTRUE != xSemaphoreGive(sentFlagSemaphore))
 //        printf("MAIN: cannot release semaphore\n");
 //
