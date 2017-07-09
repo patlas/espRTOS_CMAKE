@@ -289,21 +289,26 @@ add_custom_command(TARGET ${TARGET_NAME}
         PRE_BUILD
         COMMAND ${CMAKE_AR} -dv ${SDK_LIB_DIR}/libcirom.a lib_a-printf.o
         COMMAND rm -r -f ${OUT_DIR}
+        COMMAND rm -r -f ${TARGET_NAME}
         COMMAND mkdir ${OUT_DIR}
         )
 
 # post build objcopy
 add_custom_command(TARGET ${TARGET_NAME}
         POST_BUILD
-        COMMAND ${CMD_OBJCOPY} --only-section .text -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.text.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.data.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.rodata.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.irom0text.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .text -O binary ${TARGET_NAME} eagle.app.v6.text.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} eagle.app.v6.data.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} eagle.app.v6.rodata.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} eagle.app.v6.irom0text.bin
         COMMAND ${CMD_OBJDUMP} -x -s ${TARGET_NAME} > ${OUT_DIR}/eagle.dump
         COMMAND ${CMD_OBJDUMP} -S ${TARGET_NAME} > ${OUT_DIR}/eagle.S
 
+        COMMAND ${PYTHON} ${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}
 
-        COMMAND ${PYTHON} ${GEN_APP_DIR}/gen_appbin.py ${OUT_DIR}/${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}
+        COMMAND mv eagle.app.v6.text.bin ${OUT_DIR}/
+        COMMAND mv eagle.app.v6.data.bin ${OUT_DIR}/
+        COMMAND mv eagle.app.v6.rodata.bin ${OUT_DIR}/
+        COMMAND mv eagle.app.v6.irom0text.bin ${OUT_DIR}/
 
         )
 
