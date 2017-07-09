@@ -14,6 +14,9 @@ set(USER_DIR "${CMAKE_SOURCE_DIR}/user")
 set(SDIO_DIR "${CMAKE_SOURCE_DIR}/sdio")
 set(DRIVER_DIR "${CMAKE_SOURCE_DIR}/driver")
 set(LINKER_DIR "${SDK_DIR}/ld")
+set(GDBSTUB_DIR "${CMAKE_SOURCE_DIR}/gdbstub2")
+
+set(OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen_bin")
 
 
 set(PYTHON "/usr/bin/python")
@@ -137,14 +140,20 @@ set(FREE_RTOS_FILES
         ${SDK_DIR}/third_party/freertos/timers.c
 )
 
+set(GDBSTUB_FILES
+        ${GDBSTUB_DIR}/gdbstub.c
+        ${GDBSTUB_DIR}/gdbstub-entry.S
+)
+
 
 
 
 include_directories(
-        #${FATFS_DIR}
+        ${FATFS_DIR}
         ${DRIVER_DIR}
         ${USER_DIR}
         ${SDIO_DIR}
+        ${GDBSTUB_DIR}
         ${SDK_DIR}/include
         ${SDK_DIR}/include/espressif
         ${SDK_DIR}/include/espressif/esp8266
@@ -181,7 +190,7 @@ add_definitions(
 
 add_compile_options(
         #-M
-        -Os
+        -Og # Os bez gdbstub
         -g
         -Wpointer-arith
         -Wundef
@@ -195,6 +204,7 @@ add_compile_options(
         -fdata-sections
         -fno-builtin-printf
         -fno-jump-tables
+        #-ggdb
         #-fno-aggressive-loop-optimizations
 )
 
@@ -255,6 +265,7 @@ add_executable(${TARGET_NAME}
 
         ${LWIP_FILES}
         ${FREE_RTOS_FILES}
+        ${GDBSTUB_FILES}
 
         ${SDIO_DIR}/sdio.c
 
@@ -263,11 +274,11 @@ add_executable(${TARGET_NAME}
         ${USER_DIR}/tcp_server.c
         ${USER_DIR}/user_main.c
 
-#        ${FATFS_DIR}/diskio.c
-#        ${FATFS_DIR}/ff.c
-#        ${FATFS_DIR}/syscall.c
-#        ${FATFS_DIR}/unicode.c
-#        ${FATFS_DIR}/volumes.c
+        ${FATFS_DIR}/diskio.c
+        ${FATFS_DIR}/ff.c
+        ${FATFS_DIR}/syscall.c
+        ${FATFS_DIR}/unicode.c
+        ${FATFS_DIR}/volumes.c
 
         ${DRIVER_DIR}/gpio.c
         ${DRIVER_DIR}/spi.c
@@ -277,16 +288,22 @@ add_executable(${TARGET_NAME}
 add_custom_command(TARGET ${TARGET_NAME}
         PRE_BUILD
         COMMAND ${CMAKE_AR} -dv ${SDK_LIB_DIR}/libcirom.a lib_a-printf.o
+        COMMAND rm -r -f ${OUT_DIR}
+        COMMAND mkdir ${OUT_DIR}
         )
 
 # post build objcopy
 add_custom_command(TARGET ${TARGET_NAME}
         POST_BUILD
-        COMMAND ${CMD_OBJCOPY} --only-section .text -O binary ${TARGET_NAME} eagle.app.v6.text.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} eagle.app.v6.data.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} eagle.app.v6.rodata.bin
-        COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} eagle.app.v6.irom0text.bin
-        COMMAND ${PYTHON} ${GEN_APP_DIR}/gen_appbin.py ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}
+        COMMAND ${CMD_OBJCOPY} --only-section .text -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.text.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .data -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.data.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .rodata -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.rodata.bin
+        COMMAND ${CMD_OBJCOPY} --only-section .irom0.text -O binary ${TARGET_NAME} ${OUT_DIR}/eagle.app.v6.irom0text.bin
+        COMMAND ${CMD_OBJDUMP} -x -s ${TARGET_NAME} > ${OUT_DIR}/eagle.dump
+        COMMAND ${CMD_OBJDUMP} -S ${TARGET_NAME} > ${OUT_DIR}/eagle.S
+
+
+        COMMAND ${PYTHON} ${GEN_APP_DIR}/gen_appbin.py ${OUT_DIR}/${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}
 
         )
 
@@ -294,7 +311,7 @@ add_custom_command(TARGET ${TARGET_NAME}
 add_custom_target(
         flash_app
         # COMMAND python "${GEN_APP_DIR}/gen_appbin.py ${TARGET_NAME} 0 ${MODE} ${FREQ_DIV} ${SIZE_MAP}" 576000
-        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b  230400 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.flash.bin 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
+        COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b  230400 write_flash -ff 40m -fm dout -fs 4MB 0x0 ${OUT_DIR}/eagle.app.flash.bin 0x20000 ${OUT_DIR}/eagle.app.v6.irom0text.bin
         # COMMAND ${ESP8266_ESPTOOL} -p /dev/ttyUSB0 -b 230400 write_flash -ff 40m -fm dout -fs 4m 0x20000 ${CMAKE_CURRENT_BINARY_DIR}/eagle.app.v6.irom0text.bin
         # COMMAND ${ESP8266_ESPTOOL} --port /dev/ttyUSB0 write_flash -fm qio -fs 32m -ff 40m 0x00000 eagle.app.flash.bin 0x20000 eagle.app.v6.irom0text.bin
 )
