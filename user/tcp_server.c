@@ -11,7 +11,8 @@
 static struct espconn espconn_struct;
 static esp_tcp tcp;
 
-char readbuf[100];
+#define FILE_BUF_SIZE 100
+char readbuf[FILE_BUF_SIZE];
 FIL fd;
 extern xSemaphoreHandle fs_semaphore;
 
@@ -108,7 +109,7 @@ static void connect_callback(void *arg);
 //	Read file
 //	start file sending task instead -> this above cause watchdog restart
 	do {
-		if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
+		if (FR_OK != (f_read(&fd, &readbuf[0], FILE_BUF_SIZE, &readed))) // 100 = readbuf size
 		{
 			printf("[ERROR] - reading failed\n");
 			f_close(&fd);
@@ -122,6 +123,7 @@ static void connect_callback(void *arg);
 		{
 			printf("[ERROR] - sending failed\n");
 			f_close(&fd);
+			xSemaphoreGive(fs_semaphore);
 			vTaskDelete(NULL);
 		}
 //		printf("\nSend file: %s", readbuf);
@@ -168,6 +170,7 @@ char *test = "\n<h1>TEST</h1>";
 {
 	//arg contains pointer to espconn struct
 	struct espconn *pespconn = (struct espconn *) arg;
+	memset(fname, 0, 50);
 
 	printf("Receive callback\nReceived data: \"%s\"\n Length: %d\n", pdata, len);
 	
@@ -225,6 +228,7 @@ char *test = "\n<h1>TEST</h1>";
 	if(pdTRUE == xSemaphoreGive(fs_semaphore))
 	{
 		printf("\nSend Callback: semaphore released\n");
+		return;
 	}
 	printf("\nSend Callback: cannot release semaphore\n");
 }
