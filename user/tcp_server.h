@@ -7,7 +7,6 @@
 #include "espconn.h"
 
 sint8 start_server(void);
-void sender_thread(void *args);
 
 typedef struct queue_struct_t{
     struct espconn *espconn;

@@ -10,6 +10,11 @@
 
 static struct espconn espconn_struct;
 static esp_tcp tcp;
+
+char readbuf[100];
+FIL fd;
+extern xSemaphoreHandle fs_semaphore;
+
 LOCAL uint16_t server_timeover = 300;//60*60*12; // yes. 12h timeout. so what? :)
 
 typedef enum request {GET=0, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE} request_t;
@@ -48,6 +53,16 @@ static char const * const request_content = {
 	"Connection: Close\r\n\r\n\0"
 };
 
+con_type_t get_mime(char *file_name);
+static void file_sender_thread(void *args);
+int8_t send_header(struct espconn *conn, status_t stat, con_type_t type, unsigned long length);
+int8 send_data(struct espconn *conn, uint8_t *data, uint8_t size);
+static void data_recv_callback(void *arg, char *pdata, unsigned short len);
+static void data_sent_callback(void *arg);
+static void reconnect_callback(void *arg, sint8 er);
+static void disconnect_callback(void *arg);
+static void connect_callback(void *arg);
+
 
 /*IRAM_ATTR*/ con_type_t get_mime(char *file_name)
 {
@@ -64,84 +79,91 @@ static char const * const request_content = {
 	return PLAIN;
 }
 
-/*IRAM_ATTR*/ void sender_thread(void *args)
+
+
+/*IRAM_ATTR*/ static void file_sender_thread(void *args)
 {
+	/****
+	 * multi_args_t.arg1 -> file name
+	 * multi_args_t.arg2 -> esp_conn struct
+	 ***/
+
 	multi_args_t *multiarg = (multi_args_t*)args;
-	xQueueHandle *squeue = (xQueueHandle*) multiarg->arg1;
-	xSemaphoreHandle *ssemaphore = (xSemaphoreHandle*) multiarg->arg2;
+	char *file_name = (char*) multiarg->arg1;
+	struct espconn *conn = (struct espconn*) multiarg->arg2;
+
 	queue_struct_t data;
 	printf("SENDER THREAD started\n");
-	while(1)//mutex
-	{
-		
-		if(pdTRUE == xQueueReceive(*squeue, &data, 10))
-		{
-			printf("\nSender_thread: getting from queue\n");
-			while(pdFALSE == xSemaphoreTake(*ssemaphore, 10)); // zamienic na infinite
 
-			{
-				printf("Sender_thread: sending data\n");
-				printf("Sender_thread: espconn_send return %d",espconn_send(data.espconn, data.data, data.size));
-			}
-			//xSemaphoreGive(sentFlagSemaphore); callback give it back
-		}
-	}
-}
-
-
-/*IRAM_ATTR*/ void send_header(struct espconn *conn, status_t stat, con_type_t type, unsigned long length)
-{
-	queue_struct_t qstruct;
-	qstruct.espconn = conn;
-	sprintf(qstruct.data, request_content, status_list[stat], length, mime_str[type]);
-	qstruct.size = strlen(qstruct.data);
-//	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
-}
-
-/*IRAM_ATTR*/ void send_data(struct espconn *conn, uint8_t *data, uint8_t size)
-{
-	queue_struct_t qstruct;
-	qstruct.espconn = conn;
-	memcpy((void*)qstruct.data, data, size);
-	qstruct.size = size;
-
-	printf("SENDING %d",espconn_send(conn, data, size));
-//	xQueueSend(sendQueue, &qstruct, portMAX_DELAY);
-}
-
-char readbuf[100];
-FIL fd;
-/*IRAM_ATTR*/ int8_t send_file(struct espconn *conn, char *file_name){
-
-	
 
 	printf("\nTry to send file: %s", file_name);
-    if (FR_OK != f_open(&fd, file_name, FA_READ)){
+	if (FR_OK != f_open(&fd, file_name, FA_READ)){
 		printf("[ERROR] - cannot open file\n");
-		return -1;
+		vTaskDelete(NULL);
 	}
 
-	//send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
-	printf("\nFile opened, size: %d",f_size(&fd));
-    size_t readed=0;
-    // Read file
-	//start file sending task instead -> this above cause watchdog restart
+	send_header(conn, _200, get_mime(file_name), (unsigned long)f_size(&fd));
+	printf("\nFile opened, size: %d", f_size(&fd));
+	size_t readed=0;
+//	Read file
+//	start file sending task instead -> this above cause watchdog restart
 	do {
-		//if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
-		//	return -2; // break and goto f_close()
+		if (FR_OK != (f_read(&fd, &readbuf[0], 100, &readed))) // 100 = readbuf size
+		{
+			printf("[ERROR] - reading failed\n");
+			f_close(&fd);
+			vTaskDelete(NULL);
+		}
 		if(readed <= 0) break;
-		//send_data(conn, &readbuf[0], readed);
-		printf("\nSend file: %s", readbuf);
-		printf("\nSend file: %d", readed);
+
+//		wait for previous data being send
+		while(pdFALSE == xSemaphoreTake(fs_semaphore, 10)); // zamienic na infinite
+		if(0 > send_data(conn, &readbuf[0], readed))
+		{
+			printf("[ERROR] - sending failed\n");
+			f_close(&fd);
+			vTaskDelete(NULL);
+		}
+//		printf("\nSend file: %s", readbuf);
+//		printf("\nSend file: %d", readed);
 	} while(1);
 
-    // Close file
+	// Close file
 	printf("\n File closed: %d\n",f_close(&fd));
-    return 0;
+	xSemaphoreGive(fs_semaphore);
+	vTaskDelete(NULL);
 }
 
+
+
+
+/*IRAM_ATTR*/ int8_t send_header(struct espconn *conn, status_t stat, con_type_t type, unsigned long length)
+{
+//	readbuf may be to small -> in that case create new one
+	sprintf(&readbuf[0], request_content, status_list[stat], length, mime_str[type]);
+	return send_data(conn, &readbuf[0], strlen(&readbuf[0]));
+
+}
+
+
+
+/*IRAM_ATTR*/ int8 send_data(struct espconn *conn, uint8_t *data, uint8_t size)
+{
+	int8_t ret = 0;
+	ret = espconn_send(conn, data, size);
+	if(0 > ret)
+		printf("SENDING error num: %d", ret);
+	return ret;
+}
+
+
+
+
 char fname[50];
+multi_args_t file_sender_multi;
 char *test = "\n<h1>TEST</h1>";
+
+
 /*IRAM_ATTR*/ static void data_recv_callback(void *arg, char *pdata, unsigned short len)
 {
 	//arg contains pointer to espconn struct
@@ -168,21 +190,30 @@ char *test = "\n<h1>TEST</h1>";
 			memcpy(&fname[0], chr+1, name_len);
 			fname[name_len+1] = '\0';
 			printf("\nNAME:%s : %d\n", &fname[0], name_len);
+			if(fname[1] != '\0' && name_len > 2)
+			{
+				file_sender_multi.arg1 = &fname[0];
+				file_sender_multi.arg2 = pespconn;
+//				if(strncmp("/favico",&fname[0], 7));
+				if(pdPASS == xTaskCreate(file_sender_thread, "sender", 512, &file_sender_multi, 2, NULL))
+				{
+					printf("File sender task created");
+				}
+				else
+				{
+					printf("[ERROR] - sender task creation\n");
+				}
+			}
+			else
+			{
+				printf("[ERROR] - wrong file name\n");
+			}
 
-			//send_file(pespconn, &fname[0]);
-//			if(strncmp("/favico",&fname[0], 7)){
-//				send_header(pespconn, _200, HTML, 13);
-//				//printf("Ret sent: %d\n",espconn_send(pespconn, test, 13));
-				send_data(pespconn, test, 13);
-//				printf("\nPoszlo\n");
-//			}
-				
-			
 		break;
 		
 		default:
 			printf("\nRecv Callback: sending default\n");
-			///////////////send_header(pespconn, _200, PLAIN, 0);
+//			POST for json purpose
 			break;
 	}
 	
@@ -191,11 +222,14 @@ char *test = "\n<h1>TEST</h1>";
 /*IRAM_ATTR*/ static void data_sent_callback(void *arg)
 {
 	printf("\nSent Callbackt\n");
-//	if(pdTRUE == xSemaphoreGive(sentFlagSemaphore)){
-//		printf("\nSend Callback: semaphore released\n");
-//	}
-//	printf("\nSend Callback: cannot release semaphore\n");
+	if(pdTRUE == xSemaphoreGive(fs_semaphore))
+	{
+		printf("\nSend Callback: semaphore released\n");
+	}
+	printf("\nSend Callback: cannot release semaphore\n");
 }
+
+
 
 static void reconnect_callback(void *arg, sint8 er)
 {
@@ -203,10 +237,14 @@ static void reconnect_callback(void *arg, sint8 er)
 	printf("Reconnect callback\n");
 }
 
+
+
 static void disconnect_callback(void *arg)
 {
 	printf("Disconnct callback");
 }
+
+
 
 static void connect_callback(void *arg)
 {
@@ -233,10 +271,8 @@ sint8 start_server(void)
 
 
 	if(espconn_regist_connectcb (&espconn_struct, connect_callback)) return (sint8)(-1);
-	//espconn_regist_reconcb(&espconn_struct, reconnect_callback);
 	
 	espconn_set_opt(&espconn_struct, ESPCONN_REUSEADDR | ESPCONN_NODELAY/* | ESPCONN_KEEPALIVE*/);
-	//espconn_init();
 	if(espconn_accept(&espconn_struct)) return -2;
 	if(espconn_regist_time(&espconn_struct, server_timeover, 0)) return -3;
 	//if(espconn_tcp_set_max_con(1)) return (sint8)(-3);

@@ -72,7 +72,7 @@ user_rf_cal_sector_set(void)
 
 
 extern char readbuf[100];
-xSemaphoreHandle  sentFlagSemaphore;
+xSemaphoreHandle  fs_semaphore;
 xQueueHandle sendQueue;
 
 
@@ -203,6 +203,7 @@ void user_init(void)
 //    UART_SetBaudrate(0, 115200);
 //    gdbstub_init();
 
+    vSemaphoreCreateBinary(fs_semaphore);
     printf("SDK version:%s\n\n", system_get_sdk_version());
     printf("\n\n");
     
